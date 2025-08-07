@@ -8,6 +8,10 @@ import os
 
 app = Flask(__name__)
 
+@app.route("/")
+def home():
+    return "API está funcionando!"
+    
 # Cores e fontes
 BACKGROUND_COLOR = RGBColor(230, 230, 230)
 TITLE_FONT = 'Barlow'
@@ -146,3 +150,4 @@ def gerar_pptx():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
