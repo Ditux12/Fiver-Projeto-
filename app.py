@@ -8,6 +8,10 @@ import os
 
 app = Flask(__name__)
 
+@app.route('/')
+def index():
+    return "Servidor está no ar"
+    
 BACKGROUND_COLOR = RGBColor(230, 230, 230)
 TITLE_FONT = 'Calibri'  # Use uma fonte comum para evitar problemas no Render
 BODY_FONT = 'Calibri'
@@ -157,3 +161,4 @@ def gerar_pptx():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
+
