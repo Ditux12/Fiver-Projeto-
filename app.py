@@ -1,19 +1,16 @@
-from flask import Flask, request, send_file
+from flask import Flask, request, jsonify
 import pandas as pd
 from pptx import Presentation
 from pptx.util import Pt, Inches
 from pptx.dml.color import RGBColor
 import tempfile
 import os
+import base64
 
 app = Flask(__name__)
 
-@app.route('/')
-def index():
-    return "Servidor está no ar"
-    
 BACKGROUND_COLOR = RGBColor(230, 230, 230)
-TITLE_FONT = 'Calibri'  # Use uma fonte comum para evitar problemas no Render
+TITLE_FONT = 'Calibri'
 BODY_FONT = 'Calibri'
 TITLE_FONT_SIZE = Pt(28)
 BODY_FONT_SIZE = Pt(18)
@@ -33,7 +30,6 @@ def add_logo(slide, logo_path, prs):
 def add_title_slide(prs, title, subtitle, logo_path):
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     set_slide_background_gray(slide)
-
     title_box = slide.shapes.add_textbox(Inches(1), Inches(1.5), prs.slide_width - Inches(2), Inches(1))
     p = title_box.text_frame.paragraphs[0]
     run = p.add_run()
@@ -57,7 +53,6 @@ def add_title_slide(prs, title, subtitle, logo_path):
 def add_category_summary_slide(prs, category, df, logo_path):
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     set_slide_background_gray(slide)
-
     title_box = slide.shapes.add_textbox(Inches(0.7), Inches(0.5), prs.slide_width - Inches(1.4), Inches(1))
     p = title_box.text_frame.paragraphs[0]
     run = p.add_run()
@@ -83,7 +78,6 @@ def add_category_summary_slide(prs, category, df, logo_path):
 def add_news_slide(prs, title_text, circulation, logo_path):
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     set_slide_background_gray(slide)
-
     title_box = slide.shapes.add_textbox(Inches(0.7), Inches(0.3), prs.slide_width - Inches(1.4), Inches(0.8))
     p = title_box.text_frame.paragraphs[0]
     run = p.add_run()
@@ -115,7 +109,7 @@ def add_news_slide(prs, title_text, circulation, logo_path):
 @app.route('/gerar-pptx', methods=['POST'])
 def gerar_pptx():
     if 'excel' not in request.files or 'logo' not in request.files:
-        return "Faltam os arquivos 'excel' e/ou 'logo'.", 400
+        return jsonify({"erro": "Faltam os arquivos 'excel' e/ou 'logo'."}), 400
 
     excel_file = request.files['excel']
     logo_file = request.files['logo']
@@ -131,7 +125,7 @@ def gerar_pptx():
         try:
             xls = pd.ExcelFile(excel_path)
         except Exception as e:
-            return f"Erro ao ler Excel: {e}", 400
+            return jsonify({"erro": f"Erro ao ler Excel: {e}"}), 400
 
         sheets = [s for s in xls.sheet_names if not s.startswith("Sheet")]
         dataframes = {sheet: xls.parse(sheet) for sheet in sheets}
@@ -152,13 +146,17 @@ def gerar_pptx():
                 add_news_slide(prs, title, circulation, logo_path)
 
         prs.save(pptx_path)
-        return send_file(
-            pptx_path,
-            as_attachment=True,
-            download_name="relatorio.pptx",
-            mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation'
-        )
+
+        # Converter para Base64
+        with open(pptx_path, "rb") as f:
+            pptx_bytes = f.read()
+            pptx_base64 = base64.b64encode(pptx_bytes).decode('utf-8')
+
+        return jsonify({
+            "filename": "relatorio.pptx",
+            "mimetype": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "file_base64": pptx_base64
+        })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
-
